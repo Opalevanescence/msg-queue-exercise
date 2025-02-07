@@ -13,7 +13,6 @@ const myQueue = new MessageQueue();
 app.use(bodyParser.json());
 
 app.post('/createTopic', async (req, res) => {
-  // GOOD
   const { name } = req.body
   const result = await myQueue.createTopic(name);
 
@@ -21,14 +20,12 @@ app.post('/createTopic', async (req, res) => {
 });
 
 app.post('/destroyTopics', async (req, res) => {
-  // GOOD
   const result = await myQueue.destroyAllTopics();
 
   return res.json({ result });
 });
 
 app.post('/sendMessage', async (req, res) => {
-  // GOOD
   const { topic, message } = req.body
   const result = await myQueue.sendMessage(topic, message);
 
@@ -43,7 +40,6 @@ app.post('/getMessage', async (req, res) => {
 });
 
 app.post('/getSize', async (req, res) => {
-  // GOOD, except repsonse is empty
   const { topic } = req.body
   const result = await myQueue.getSize(topic);
 

@@ -9,7 +9,6 @@ Use `ps aux | grep node` to see if any child processes are accidentally left run
 ```
 # Create Topic
 curl -X POST http://localhost:8080/createTopic -H "Content-Type: application/json" -d '{"name":"pears"}'
-{"result":200}% 
 
 # Send Messages
 curl -X POST http://localhost:8080/sendMessage -H "Content-Type: application/json" -d '{"topic":"pears", "message":"Definitely dessert"}'
@@ -24,3 +23,4 @@ curl -X POST http://localhost:8080/getMessage -H "Content-Type: application/json
 
 # Destroy Topics
 curl -X POST http://localhost:8080/destroyTopics -H "Content-Type: application/json"
+```

@@ -1,12 +1,9 @@
 import {fork} from 'child_process';
-import { request } from 'http';
 
 class MessageQueue {
   constructor() {
     this.topics = new Map();
   }
-
-  // TODO: Refactor. there should only be one "on" listener that handles all cases
 
 
   createTopic(name) {
@@ -16,30 +13,12 @@ class MessageQueue {
     } else if (typeof name !== 'string') {
       console.log('Error: Topic name should be a string');
       return 400;
-    } else if (this.topics[name]) {
+    } else if (this.topics.has(name)) {
       console.log('Topic name already exists');
       return 400;
     }
     // Fork a new child for every topic
     const newTopic = fork('components/queue.js', [name, 'arguments']);
-
-
-    // Set up "on" listeners for each child
-    newTopic.on('message', ({request, childTopic, message, error}) => {
-      if (error) {
-        return 400;
-      }
-      if (request === 'getMessage') {
-        console.log(`Recieved: ${message} from Topic ${childTopic}`);
-        return 200;
-      }
-      if (request === 'getSize') {
-        console.log(`Recieved: Topic ${childTopic} has queue length ${message}`);
-        return 200;
-      }
-      return 500;
-    });
-
 
     this.topics.set(name, newTopic);
     
@@ -81,34 +60,59 @@ class MessageQueue {
   }
 
   getMessage(topic) {
-    if (!topic) {
-      console.log('Error: Topic name invalid')
-      return 400;
-    }
-    const currTopic = this.topics.get(topic);
-    if (!currTopic) {
-      console.log('Error: Topic name invalid');
-      return 400;
-    }
+    return new Promise((resolve) => {
+      if (!topic) {
+        console.log('Error: Topic name invalid')
+        resolve(400);
+      }
+      const currTopic = this.topics.get(topic);
+      if (!currTopic) {
+        console.log('Error: Topic name invalid');
+        resolve(400);
+      }
 
-    // send message to respective child for topic
-    currTopic.send({isMsgReq: true});
+      // send message to respective child for topic
+      let response = 500;
+      currTopic.once('message',({request, childTopic, message, error}) => {
+        if (error) {
+          resolve(400);
+        }
+        if (request === 'getMessage') {
+          console.log(`Recieved: \"${message}\" from Topic ${childTopic}`);
+          resolve(200);
+        }
+      });
+      currTopic.send({request: 'getMessage'});
+    });
   }
 
   getSize(topic) {
-    // no topic or topic doesn't exist
-    if (!topic) {
-      console.log('Error: Topic name invalid')
-      return 400;
-    } 
-    const currTopic = this.topics.get(topic);
-    if (!currTopic) {
-      console.log('Error: Topic name invalid');
-      return 400;
-    }
-
-    // get size of queue for topic name
-    currTopic.send({isLengthReq: true});
+    return new Promise((resolve) => {
+      // no topic or topic doesn't exist
+      if (!topic) {
+        console.log('Error: Topic name invalid')
+        resolve(400);
+      } 
+      const currTopic = this.topics.get(topic);
+      if (!currTopic) {
+        console.log('Error: Topic name invalid');
+        resolve(400);
+      }
+  
+      // get size of queue for topic name
+      currTopic.once('message', ({request, childTopic, message, error}) => {
+        if (error) {
+          resolve(400);
+        }
+        if (request === 'getSize') {
+          console.log(`Recieved: Topic ${childTopic} has queue length ${message}`);
+          resolve(200);
+        }
+        resolve(500);
+      });
+  
+      currTopic.send({request: 'getSize'});
+    });
   }
 }
 
