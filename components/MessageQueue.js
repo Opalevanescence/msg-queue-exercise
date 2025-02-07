@@ -1,4 +1,5 @@
 import {fork} from 'child_process';
+import { request } from 'http';
 
 class MessageQueue {
   constructor() {
@@ -21,6 +22,25 @@ class MessageQueue {
     }
     // Fork a new child for every topic
     const newTopic = fork('components/queue.js', [name, 'arguments']);
+
+
+    // Set up "on" listeners for each child
+    newTopic.on('message', ({request, childTopic, message, error}) => {
+      if (error) {
+        return 400;
+      }
+      if (request === 'getMessage') {
+        console.log(`Recieved: ${message} from Topic ${childTopic}`);
+        return 200;
+      }
+      if (request === 'getSize') {
+        console.log(`Recieved: Topic ${childTopic} has queue length ${message}`);
+        return 200;
+      }
+      return 500;
+    });
+
+
     this.topics.set(name, newTopic);
     
     if (newTopic) {
@@ -73,14 +93,6 @@ class MessageQueue {
 
     // send message to respective child for topic
     currTopic.send({isMsgReq: true});
-    currTopic.on('message', ({childTopic, message, error}) => {
-      if (error) {
-        return 400;
-      }
-      // if successfully received
-      console.log(`Recieved: ${message} from Topic ${childTopic}`);
-      return 200;
-    });
   }
 
   getSize(topic) {
@@ -97,14 +109,6 @@ class MessageQueue {
 
     // get size of queue for topic name
     currTopic.send({isLengthReq: true});
-    currTopic.on('message', ({childTopic, length, error}) => {
-      if (error) {
-        return 400;
-      }
-      // if successfully received
-      console.log(`Recieved: Topic ${childTopic} has queue length ${length}`);
-      return 200;
-    });
   }
 }
 
